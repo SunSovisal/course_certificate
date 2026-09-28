@@ -5,12 +5,10 @@ import Header from './header.jsx';
 import Template from './template.jsx';
 import Footer from './footer.jsx'
 
-function needsDirectPdfView() {
+function isIOS() {
   const ua = navigator.userAgent;
-  const iOS = /iPad|iPhone|iPod/.test(ua)
+  return /iPad|iPhone|iPod/.test(ua)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const safari = /safari/i.test(ua) && !/chrome|crios|android|edg|fxios|opr/i.test(ua);
-  return iOS || safari;
 }
 
 function certificateFileName(name) {
@@ -93,6 +91,7 @@ export default function Candidate({ name }) {
   const certificateRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [readyFile, setReadyFile] = useState(null);
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -121,24 +120,25 @@ export default function Candidate({ name }) {
     };
   }, []);
 
+  const handleSave = async () => {
+    if (!readyFile) return;
+    try {
+      await navigator.share({ files: [readyFile], title: readyFile.name });
+      setReadyFile(null);
+      setError('');
+    } catch (shareError) {
+      if (shareError?.name === 'AbortError') return;
+      setError('The save menu could not open. Tap Save PDF again.');
+    }
+  };
+
   const handleDownloadPdf = async () => {
     const element = certificateRef.current;
     if (!element || busy) return;
 
     setBusy(true);
     setError('');
-
-    // Safari cancels a file save that starts after html2canvas finishes.
-    const popup = needsDirectPdfView() ? window.open('', '_blank') : null;
-    if (needsDirectPdfView() && !popup) {
-      setBusy(false);
-      setError('Safari blocked the download. Allow pop-ups for this site, then try again.');
-      return;
-    }
-    if (popup) {
-      popup.document.write('<p style="font-family:sans-serif;padding:24px">Preparing your certificate…</p>');
-      popup.document.close();
-    }
+    setReadyFile(null);
 
     try {
       const image = await captureCertificate(element);
@@ -150,24 +150,34 @@ export default function Candidate({ name }) {
 
       const filename = certificateFileName(name);
       const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
+      const file = new File([blob], filename, { type: 'application/pdf' });
 
-      if (popup) {
-        popup.location.href = url;
-      } else {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+      if (isIOS() && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          return;
+        } catch (shareError) {
+          if (shareError?.name === 'AbortError') return;
+          setReadyFile(file);
+          return;
+        }
       }
 
-      setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+      if (isIOS()) {
+        setReadyFile(file);
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch (downloadError) {
       console.error(downloadError);
-      popup?.close();
       setError('The PDF could not be created. Please try again.');
     } finally {
       setBusy(false);
@@ -181,13 +191,16 @@ export default function Candidate({ name }) {
         <button
           type="button"
           className="download-btn"
-          onClick={handleDownloadPdf}
+          onClick={readyFile ? handleSave : handleDownloadPdf}
           disabled={busy}
           aria-busy={busy}
         >
-          {busy ? 'Preparing PDF…' : 'Download PDF'}
+          {busy ? 'Preparing PDF…' : readyFile ? 'Save PDF' : 'Download PDF'}
         </button>
       </div>
+      {readyFile ? (
+        <p className="download-hint">Tap Save PDF, then choose Save to Files.</p>
+      ) : null}
       {error ? <p className="download-error" role="alert">{error}</p> : null}
 
       <div className="certificate-frame" ref={frameRef}>

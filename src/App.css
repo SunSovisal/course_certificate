@@ -368,6 +368,13 @@ body {
   font-size: 0.95rem;
 }
 
+.download-hint {
+  margin: 0.75rem 0 0;
+  color: #333;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
 @media (max-width: 800px) {
   body {
     padding: 0.5rem 0 2rem;
