@@ -6,14 +6,14 @@ export default function Template({ name }) {
       <h1 className="recipient-name">{name}</h1>
       <p className="certificate-text">
         You have successfully fulfilled all the requirements and completed the
-        intensive training for the <span class="Crash-Course">Database and MySQL</span> course as part of the <span class="Crash-Course">“GIC
-        Vacation Crash Course 2025”</span>. This certificate is awarded by the
+        intensive training for the <span className="Crash-Course">Database and SQL</span> course as part of the <span className="Crash-Course">“GIC
+        Vacation Crash Course 2026”</span>. This certificate is awarded by the
         Department of Information and Communication Engineering in recognition
         of your commitment to academic excellence.
       </p>
       <div className="date-location">
         <p>
-          From 1<sup> st</sup> September to 2<sup> nd</sup> October 2025, Phnom
+          From 1<sup>st</sup> September to 30<sup>th</sup> September 2026, Phnom
           Penh, Cambodia.
         </p>
       </div>
